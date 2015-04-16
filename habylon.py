@@ -1,6 +1,6 @@
 import json
 import os, sys
-import glob
+
 import collections
 
 class BObject(dict):
@@ -33,13 +33,13 @@ class Scene(BObject):
         self.schema = self.load_schema("./schema")
         super(Scene, self).__init__(self.schema, "scene")
 
-    def load_schema(self, path):
+    def load_schema(self, path, schema={}):
         """Load *.json files defining Babylon objects.
         """
-        schema = {}
-        schemas = os.path.join(path, "*.json")
-        files   = glob.glob(schemas)
-
+        from glob import glob
+        location = os.path.join(path, "*.json")
+        files    = glob(location)
+ 
         for file in files:
             with open(file) as file_object:
                 obj  = json.load(file_object)
@@ -74,10 +74,16 @@ class Scene(BObject):
             return BObject(self.schema, type)
 
 
+def main():
+    """Basic test of our tiny module."""
 
+    scene  = Scene()
+    box    = scene.new('box')
+    sphere = scene.new('sphere')
 
+    scene.add(box)
+    scene.add(sphere)
 
-scene = Scene()
-box   = scene.new('box')
-scene.add(box)
-print scene
+    print scene
+
+if __name__ == "__main__": main()
