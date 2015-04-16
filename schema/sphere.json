@@ -1,0 +1,7 @@
+{
+    "id": "SpherePrimitive",
+    "segments": 5,
+    "diameter": 1.0,
+    "canBeRegenerated": true,
+    "tags": "Sphere Primitive canBeRegenerated"
+}
