@@ -1,0 +1,17 @@
+{
+    "autoClear": true,
+    "clearColor": [0, 0, 0],
+    "ambientColor": [0, 0, 0],
+    "gravity": [0, -9.81, 0],
+    "cameras": [],
+    "activeCamera": "",
+    "lights": [],
+    "materials": [],
+    "geometries": {"vertexData":[]},
+    "meshes": [],
+    "animations": [],
+    "multiMaterials": [],
+    "shadowGenerators": [],
+    "skeletons": [],
+    "sounds": []
+}

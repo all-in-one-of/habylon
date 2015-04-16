@@ -1,0 +1,10 @@
+{
+    "name": "",
+    "id": "",
+    "type": 1,
+    "position": [10.0, 10.0, -10.0],
+    "direction": [0.0, 0.0, 0.0],
+    "intensity": 1,
+    "diffuse": [1, 1, 1],
+    "specular": [1, 1, 1]
+    }
