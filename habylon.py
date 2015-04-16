@@ -4,6 +4,11 @@ import glob
 import collections
 
 class BObject(dict):
+    """ Dictionary like stucture, but very peaky about data types and schema.
+        You can't add anything not present in schema. This is good, as variations
+        are root of all evil in not homogenious software like Python modules which
+        are meant to be used in other softwares.
+    """
     def __init__(self, schema, obj):
         super(BObject, self).__init__(schema[obj])
         self.type = obj
@@ -15,43 +20,64 @@ class BObject(dict):
             super(BObject, self).__setitem__(key, value)
         else:
             raise TypeError("Wrong type of %s: %s" % (key, value))
-            
+
     def __repr__(self):
         from json import dumps
         return dumps(self, indent=1)
 
-def load_schema(path):
-    schema = {}
-    schemas = os.path.join(path, "*.json")
-    files   = glob.glob(schemas)
+class Scene(BObject):
+    """Ideally this should be the only specialized class derived from BObject. 
+       Scene takes care of creation and adding object to the Babylon scene.
+    """
+    def __init__(self, *args):
+        self.schema = self.load_schema("./schema")
+        super(Scene, self).__init__(self.schema, "scene")
 
-    for file in files:
-        with open(file) as file_object:
-            obj  = json.load(file_object)
-            name = os.path.split(file)[1]
-            name = os.path.splitext(name)[0]
-            schema[name] = obj
+    def load_schema(self, path):
+        """Load *.json files defining Babylon objects.
+        """
+        schema = {}
+        schemas = os.path.join(path, "*.json")
+        files   = glob.glob(schemas)
 
-    return schema
+        for file in files:
+            with open(file) as file_object:
+                obj  = json.load(file_object)
+                name = os.path.split(file)[1]
+                name = os.path.splitext(name)[0]
+                schema[name] = obj
+        return schema
+
+    def add(self, child):
+        """Babylon file has pretty much hardcoded structure...
+        """
+        if self.type == "scene":
+            if child.type == 'box':
+                self['geometries']['boxes'].append(child)
+            elif child.type == 'sphere':
+                self['geometries']['spheres'].append(child)
+            elif child.type == 'vertexData':
+                self['geometries']['vertexData'].append(child)
+            elif child.type == "mesh":
+                self['meshes'].append(child)
+            elif child.type == 'light':
+                self['lights'].append(child)
+            elif child.type == "material":
+                self['materials'].append(child)
+            return True
+        return
+
+    def new(self, type):
+        """Creats a new class of specified type from schema definition.
+        """
+        if type in self.schema:
+            return BObject(self.schema, type)
 
 
-# Get recipe:
-schema = load_schema("./schema")
 
-# Scene instance:
-scene = BObject(schema, 'scene')
 
-# Mesh instance:
-mesh = BObject(schema, "mesh") 
 
-# Vertx buffer
-vertices = BObject(schema, 'vertexData')
-
-# Combine them:
-scene['geometries']['vertexData'].append(vertices)
-mesh['geometryId'] = vertices['id']
-scene['meshes'].append(mesh)
-
+scene = Scene()
+box   = scene.new('box')
+scene.add(box)
 print scene
-
-# print json.dumps(scene, indent=2)
