@@ -1,7 +1,8 @@
 import json
 import os, sys
-
 import collections
+# TODO: Remove
+DEFAULT_PATH = "/Users/symek/Documents/work/habylon"
 
 class BObject(dict):
     """ Dictionary like stucture, but very peaky about data types and schema.
@@ -25,12 +26,20 @@ class BObject(dict):
         from json import dumps
         return dumps(self, indent=1)
 
+    def dump(self, filename):
+        from json import dump
+        with open(filename, 'w') as file:
+            return dump(self, file, indent=2)
+
 class Scene(BObject):
     """Ideally this should be the only specialized class derived from BObject. 
        Scene takes care of creation and adding object to the Babylon scene.
     """
     def __init__(self, *args):
-        self.schema = self.load_schema("./schema")
+        # NOTE: temporary fallback:
+        path = os.getenv("HABYLON_PATH", DEFAULT_PATH)
+        # Get the notion who we are...
+        self.schema = self.load_schema(os.path.join(path, "schema"))
         super(Scene, self).__init__(self.schema, "scene")
 
     def load_schema(self, path, schema={}):
@@ -64,6 +73,10 @@ class Scene(BObject):
                 self['lights'].append(child)
             elif child.type == "material":
                 self['materials'].append(child)
+            elif child.type == 'camera':
+                self['cameras'].append(child)
+                # NOTE: Last added became active one:
+                self['activeCamera'] = child['name']
             return True
         return
 
@@ -80,9 +93,11 @@ def main():
     scene  = Scene()
     box    = scene.new('box')
     sphere = scene.new('sphere')
+    camera = scene.new('camera')
 
     scene.add(box)
     scene.add(sphere)
+    scene.add(camera)
 
     print scene
 
