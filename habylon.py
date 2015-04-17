@@ -26,10 +26,10 @@ class BObject(dict):
         from json import dumps
         return dumps(self, indent=1)
 
-    def dump(self, filename):
+    def dump(self, filename, check_circular=True):
         from json import dump
         with open(filename, 'w') as file:
-            return dump(self, file, indent=2)
+            return dump(self, file, indent=2, check_circular=check_circular)
 
 class Scene(BObject):
     """Ideally this should be the only specialized class derived from BObject. 
@@ -71,6 +71,8 @@ class Scene(BObject):
                 self['meshes'].append(child)
             elif child.type == 'light':
                 self['lights'].append(child)
+            elif child.type == 'shadowGenerator':
+                self['shadowGenerators'].append(child)
             elif child.type == "material":
                 self['materials'].append(child)
             elif child.type == 'camera':
