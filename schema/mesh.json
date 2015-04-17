@@ -11,7 +11,7 @@
         "billboardMode": 0,
         "receiveShadows": true,
         "geometryId":"",
-        "positions": [],
+        "positions":[],
         "normals": [],
         "uvs": [],
         "indices": [],
