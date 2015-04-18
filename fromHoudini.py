@@ -107,7 +107,7 @@ def parse_sop(scene, bobject, sop):
         if geometry.findPointAttrib('N'):
             normals = list(geometry.pointFloatAttribValues('N'))
         else:
-            # NOTE: eearly quit as it seams that Babylon can't deal with 
+            # NOTE: early quit as it seams that Babylon can't deal with 
             # geometry without normals.
             return bobject
 
@@ -190,7 +190,7 @@ def run(scene, selected):
 
         elif node.type().name() == "hlight":
             light  = parse_light(scene, scene.new("light"), node)
-            # TODO: Move to to parser:
+            # TODO: Move to the parser:
             shadow = scene.new("shadowGenerator")
             shadow['lightId'] = light['id']
             scene.add(shadow)
@@ -212,9 +212,9 @@ def run(scene, selected):
             scene.add(obj)
 
     # link shadows:
-    for mesh in scene['meshes']:
-        for shadow in scene['shadowGenerators']:
-            if mesh['id'] not in shadow['renderList']:
+    # TODO: Respect shadow linking. 
+    for shadow in scene['shadowGenerators']:
+        for mesh in scene['meshes']:
                 shadow['renderList'].append(mesh['id'])
 
     scene.dump("/Users/symek/Documents/work/habylon/test.babylon")
