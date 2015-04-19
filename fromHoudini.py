@@ -14,7 +14,6 @@ def parse_light(scene, bobject, node):
     """As name says. Point, spot, and distante light are suppored.
     """
     light_type = node.parm('light_type').eval()
-
     if light_type == 0:
         if node.parm('coneenable').eval():
             light_type = 2
@@ -30,6 +29,7 @@ def parse_light(scene, bobject, node):
     bobject['direction']= list(node.worldTransform().extractRotates())
     bobject['diffuse']  = list(node.parmTuple('light_color').eval())
     bobject['intensity']= node.parm('light_intensity').eval()
+   
     return bobject
 
 def parse_geo_as_bbox(bobject, node):
@@ -45,6 +45,7 @@ def parse_geo_as_bbox(bobject, node):
 
 def parse_vertex_attribs(geometry, ignore_uv=False, duplicate_uv=False):
     """Parses vertices' attribs by iterating over polygons and its vertices.
+        TODO: This will be terribly slow for many/big meshes.
     """
 
     positions = []
@@ -176,7 +177,53 @@ def parse_material(scene, bobject, shop):
     bobject['diffuseTexture'] = diffuseTexture
     return bobject
 
+def parse_channels(scene, bobject, node, parm, start, end,  freq=30):
+    """ Parse animated parameters on Obj level. freq is frequence we evaluate channels
+        defined by expressions, (not keyframes). Still I don't know what to do if parmTuple
+        have channels in different frames. 
+    """
+    keyframes = []
+    #FIXME: This doesn't account for cases when object is pareted to animated source,
+    # We could check worldTransform(), but this wouldn't be efficent to bake any animation 
+    # per frame, would it? Perhaps this should be an user option?
+    # FIXME: Not sure if this should be here. parser shouldn't be worry about
+    # targets name or whatevert else... just parse object and return values!
+    channels  = {"t": u"position", 'r': u'rotation', 's': u"scaling"}
+    bobject['name']     = id_from_path(node.path()) + "_" + channels[parm[0]]
+    bobject['property'] = channels[parm[0]]
+    bobject['dataType'] = scene.ANIM_TYPE_VECTOR
+
+    # Find and parse keyframes. 
+    # NOTE: First keys found determins other channels values in parmTuple
+    parm = node.parm(parm)
+    # NOTE: we assume for now that single keyframe means expression...
+    if len(parm.keyframes()) > 1:
+        for item in parm.keyframes():
+            keyframe = scene.new('animationKey')
+            keyframe['frame']  = item.frame()
+            keyframe['values'] = list(parm.tuple().evalAsFloatsAtFrame(item.frame()))
+            bobject['keys'].append(keyframe)
+    else:
+    # Single keyframe makes channel to bake. 
+    # This definitely should be exporter option per object.
+        for frame in range(start, end, freq):
+            keyframe = scene.new("animationKey")
+            keyframe['frame']  = frame * 1.0
+            keyframe['values'] = list(parm.tuple().evalAsFloatsAtFrame(int(frame)))
+            bobject['keys'].append(keyframe)
+
+    first = bobject['keys'][0]['frame']
+    last  = bobject['keys'][-1]['frame']
+    bobject['autoAnimateFrom'] = first 
+    bobject['autoAnimateTo']   = last
+
+    return bobject
+
+
+
 def id_from_path(path):
+    """Just a pretty-look id from Houdini's object path.
+    """
     return unicode(path.replace("/", "_")[1:])
 
 def run(scene, selected):
@@ -203,12 +250,27 @@ def run(scene, selected):
             # both geometry and object data.
             mesh  = parse_sop(scene, scene.new('mesh'), node.renderNode())
             obj   = parse_obj(scene, mesh, node)
+
             # Obj level materials for now:
             material_path = node.parm('shop_materialpath').eval()
             if material_path != "":
                 material = parse_material(scene, scene.new('material'), hou.node(material_path))
                 obj['materialId'] = material['id']
                 scene.add(material)
+
+            # Animation export. Babylon deals with vector or float animation,
+            # so we have to treat all tuple channeles at once even if only one axe
+            # is animated.
+            for tuple_ in "t r s".split():
+                for axe in 'x y z'.split():
+                    parm = tuple_ + axe
+                    if node.parm(parm).isTimeDependent():
+                        start, end = (hou.expandString("$RFSTART"), hou.expandString('$RFEND'))
+                        animation = parse_channels(scene, scene.new('animation'), node, parm, int(start), int(end), int(hou.fps()))
+                        obj['animations'].append(animation)
+                        break
+
+
             scene.add(obj)
 
     # link shadows:
