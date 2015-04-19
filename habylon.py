@@ -4,15 +4,24 @@ import collections
 # TODO: Remove
 DEFAULT_PATH = "/Users/symek/Documents/work/habylon"
 
+BABYLON_CONSTANTS = dict((("ANIM_TYPE_FLOAT", 0),
+                          ("ANIM_TYPE_VECTOR", 1),
+                          ("ANIM_TYPE_QUATERNION", 2),
+                          ("ANIM_TYPE_MATRIX", 3),
+                          ("ANIM_LOOP_REL", 0),
+                          ("ANIM_LOOP_CYC", 1),
+                          ("ANIM_LOOP_CONST", 2)))
+
+
 class BObject(dict):
     """ Dictionary like stucture, but very peaky about data types and schema.
-        You can't add anything not present in schema. This is good, as variations
-        are root of all evil in not homogenious software like Python modules which
-        are meant to be used in other softwares.
+        You can't add anything not present in schema, or change its type (like: int != float)
     """
     def __init__(self, schema, obj):
         super(BObject, self).__init__(schema[obj])
+        # type is Babylon object type (camera, light, mesh etc).
         self.type = obj
+       
     def __setitem__(self, key, value):
         """Custom item setter. Main reason fo it is type checking.
         """
@@ -36,13 +45,20 @@ class Scene(BObject):
        Scene takes care of creation and adding object to the Babylon scene.
     """
     def __init__(self, *args):
+        """Initilize with scene (global in Babylon docs) schema.
+        """
         # NOTE: temporary fallback:
         path = os.getenv("HABYLON_PATH", DEFAULT_PATH)
+
         # Get the notion who we are...
-        self.schema = self.load_schema(os.path.join(path, "schema"))
+        self.schema = self.load_schemas(os.path.join(path, "schema"))
         super(Scene, self).__init__(self.schema, "scene")
 
-    def load_schema(self, path, schema={}):
+         # Copy here Babylon constants, so we keep them close later on:
+        for const in BABYLON_CONSTANTS:
+            setattr(self, const, BABYLON_CONSTANTS[const])
+
+    def load_schemas(self, path, schema={}):
         """Load *.json files defining Babylon objects.
         """
         from glob import glob
