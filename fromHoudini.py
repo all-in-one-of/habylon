@@ -15,6 +15,9 @@ def parse_camera(scene, bobject, node):
 
 
 def convert_space(matrix, space):
+    """ Convert between different coordinate system using provided
+        matrix.
+    """
     from hou import Matrix4
     new_space = Matrix4(space)
     return new_space.inverted() * matrix * new_space
@@ -42,6 +45,8 @@ def parse_light(scene, bobject, node):
     bobject['direction']= list(Vector3(0,0,-1) * babylonTransform)
     bobject['diffuse']  = list(node.parmTuple('light_color').eval())
     bobject['intensity']= node.parm('light_intensity').eval()
+    #FIXME: JS examples claims this should be in radians, but makes no sense in tests...
+    bobject['angle']    = node.parm('coneangle').eval()
    
     return bobject
 
@@ -290,6 +295,7 @@ def run(scene, selected):
     # TODO: Respect shadow linking. 
     for shadow in scene['shadowGenerators']:
         for mesh in scene['meshes']:
+            if mesh not in shadow['renderList']:
                 shadow['renderList'].append(mesh['id'])
 
     scene.dump("/Users/symek/Documents/work/habylon/test.babylon")
