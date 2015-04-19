@@ -255,10 +255,11 @@ def run(scene, selected):
 
         elif node.type().name() == "hlight":
             light  = parse_light(scene, scene.new("light"), node)
-            # TODO: Move to the parser:
-            shadow = scene.new("shadowGenerator")
-            shadow['lightId'] = light['id']
-            scene.add(shadow)
+            # shadow_type = 0 means no shadow, else raytrace or depth shadows:
+            if node.parm('shadow_type').eval():
+                shadow = scene.new("shadowGenerator")
+                shadow['lightId'] = light['id']
+                scene.add(shadow)
             scene.add(light)
 
         elif node.type().name() == 'geo':
