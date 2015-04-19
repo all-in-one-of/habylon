@@ -12,7 +12,7 @@ BABYLON_CONSTANTS = dict((("ANIM_TYPE_FLOAT", 0),
                           ("ANIM_LOOP_CYC", 1),
                           ("ANIM_LOOP_CONST", 2)))
 
-
+# TODO: Inherit from collections.OrderedDict, not dict.
 class BObject(dict):
     """ Dictionary like stucture, but very peaky about data types and schema.
         You can't add anything not present in schema, or change its type (like: int != float)
@@ -57,6 +57,9 @@ class Scene(BObject):
          # Copy here Babylon constants, so we keep them close later on:
         for const in BABYLON_CONSTANTS:
             setattr(self, const, BABYLON_CONSTANTS[const])
+
+        # Matrix fliping X axis for Babylon coorindate system.
+        self.HOUDINI_TO_BABYLON_SPACE = (-1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1)
 
     def load_schemas(self, path, schema={}):
         """Load *.json files defining Babylon objects.

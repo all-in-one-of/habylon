@@ -1,18 +1,29 @@
 def parse_camera(scene, bobject, node):
     """As the name says."""
-    import hou, math
+    from hou import Vector3, Matrix4
+    from math import atan
+
+    babylonTransform    = convert_space(node.worldTransform(), scene.HOUDINI_TO_BABYLON_SPACE)
     bobject['id']       = id_from_path(node.path())
     bobject['name']     = unicode(node.name())
-    bobject['position'] = list(node.worldTransform().extractTranslates())
-    bobject['target']   = list(hou.Vector3(0,0,-1) * node.worldTransform())
+    bobject['position'] = list(babylonTransform.extractTranslates())
+    bobject['target']   = list(Vector3(0,0,-1) * babylonTransform)
     aperture            = node.parm("aperture").eval()
     focal               = node.parm("focal").eval()
-    bobject['fov']      = 2 * math.atan((aperture/2.0) / focal)
+    bobject['fov']      = 2 * atan((aperture/2.0) / focal)
     return bobject
 
+
+def convert_space(matrix, space):
+    from hou import Matrix4
+    new_space = Matrix4(space)
+    return new_space.inverted() * matrix * new_space
+
 def parse_light(scene, bobject, node):
-    """As name says. Point, spot, and distante light are suppored.
+    """As name says. Point, spot, and distante light are supported.
     """
+    from hou import Vector3, Matrix4
+
     light_type = node.parm('light_type').eval()
     if light_type == 0:
         if node.parm('coneenable').eval():
@@ -22,11 +33,13 @@ def parse_light(scene, bobject, node):
     else:
         light_type = 0
 
+    babylonTransform    = convert_space(node.worldTransform(), scene.HOUDINI_TO_BABYLON_SPACE)
     bobject['type']     = light_type
     bobject['id']       = id_from_path(node.path())
     bobject['name']     = unicode(node.name())
-    bobject['position'] = list(node.worldTransform().extractTranslates())
-    bobject['direction']= list(node.worldTransform().extractRotates())
+    bobject['position'] = list(babylonTransform.extractTranslates())
+    # Similarly to camera, Houdini's lights have flipped z axis:
+    bobject['direction']= list(Vector3(0,0,-1) * babylonTransform)
     bobject['diffuse']  = list(node.parmTuple('light_color').eval())
     bobject['intensity']= node.parm('light_intensity').eval()
    
