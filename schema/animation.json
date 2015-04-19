@@ -1,0 +1,12 @@
+{
+    "dataType": 1,
+    "framePerSecond": 30,
+    "loopBehavior": 1,
+    "name": "",
+    "property": "",
+    "keys": [],
+    "autoAnimate": true,
+    "autoAnimateFrom": 0.0,
+    "autoAnimateTo": 120.0,
+    "autoAnimateLoop": true
+}
