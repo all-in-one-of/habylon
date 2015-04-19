@@ -112,6 +112,8 @@ def parse_sop(scene, bobject, sop):
     indices   = []
     normals   = []
     uvs       = []
+    uvs2      = []
+    colors    = []
     import hou
     # Check if we have vertex' or points's defined attributes:
     if geometry.findVertexAttrib("N"):
@@ -130,8 +132,17 @@ def parse_sop(scene, bobject, sop):
             # geometry without normals.
             return bobject
 
+        # Uvs:
         if geometry.findPointAttrib('uv'):
             uvs = list(geometry.pointFloatAttribValues('uv'))
+        # Uvs2:
+        if geometry.findPointAttrib('uv2'):
+            uvs2 = list(geometry.pointFloatAttribValues('uv2'))
+
+        # Color:
+        # TODO: add alpha per point:
+        if geometry.findPointAttrib('Cd'):
+            colors = list(geometry.pointFloatAttribValues('Cd'))
 
         positions = list(geometry.pointFloatAttribValues('P'))
 
@@ -147,6 +158,10 @@ def parse_sop(scene, bobject, sop):
     bobject['positions'] = positions
     bobject['normals']   = normals
     bobject['uvs']       = uvs
+    bobject['uvs2']      = uvs2
+    bobject['colors']    = colors
+    if not colors:
+        bobject.__delitem__('colors')
     bobject['indices']   = indices
 
     submesh = scene.new('subMesh')
