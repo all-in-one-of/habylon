@@ -15,5 +15,6 @@
         "normals": [],
         "uvs": [],
         "indices": [],
-        "subMeshes": []
+        "subMeshes": [],
+        "animations": []
 }
