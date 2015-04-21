@@ -153,20 +153,32 @@ def parse_sop(scene, bobject, sop):
             for v in prim.vertices():
                 indices.append(v.point().number())
 
-    # Assign arrays to our object:
-    # TODO: I would rather use vertexData if possible.
-    bobject['positions'] = positions
-    bobject['normals']   = normals
-    bobject['uvs']       = uvs
-    bobject['uvs2']      = uvs2
-    bobject['colors']    = colors
+    # Assign arrays to our object using vertexData
+    # and assigning it to this mesh.
+    # TODO: I assume vertexData could be shared among meshes. Can we support it?
+    # This would be possible via packed primitive assuming we can recongize them
+    # via an attribute (check).
+
+    vertexData = scene.new('vertexData')
+    vertexData['id'] = id_from_path(sop.path())
+
+    vertexData['positions'] = positions
+    vertexData['normals']   = normals
+    vertexData['uvs']       = uvs
+    vertexData['uvs2']      = uvs2
+    vertexData['colors']    = colors
+    vertexData['indices']   = indices
+
+    # We have to remove this key, otherwise Bab. will see black color:
     if not colors:
-        bobject.__delitem__('colors')
-    bobject['indices']   = indices
+        vertexData.__delitem__('colors')
 
     submesh = scene.new('subMesh')
     submesh = define_submesh(submesh, positions, indices)
+
+    bobject['geometryId'] = vertexData['id']
     bobject['subMeshes'].append(submesh)
+    scene.add(vertexData)
 
     return bobject
 

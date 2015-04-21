@@ -4,5 +4,7 @@
     "positions": [ ],
     "normals": [],
     "uvs": [],
+    "uvs2":[],
+    "colors":[],
     "indices": []
 }
