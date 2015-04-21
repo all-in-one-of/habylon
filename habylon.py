@@ -40,6 +40,15 @@ class BObject(dict):
         with open(filename, 'w') as file:
             return dump(self, file, indent=2, check_circular=check_circular)
 
+    def to_binary_string(self, attribute_array, formatter='f'):
+        """ Return binary string from the provided int or float array. 
+        """
+        from struct import pack
+        if isinstance(attribute_array[0], type(0)):
+            formatter  = 'i'
+        return pack(formatter*len(attribute_array), *attribute_array)
+
+
 class Scene(BObject):
     """Ideally this should be the only specialized class derived from BObject. 
        Scene takes care of creation and adding object to the Babylon scene.

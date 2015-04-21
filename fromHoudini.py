@@ -3,7 +3,8 @@ def parse_camera(scene, bobject, node):
     from hou import Vector3, Matrix4
     from math import atan
 
-    babylonTransform    = convert_space(node.worldTransform(), scene.HOUDINI_TO_BABYLON_SPACE)
+    babylonTransform    = convert_space(node.worldTransform(), \
+                                        scene.HOUDINI_TO_BABYLON_SPACE)
     bobject['id']       = id_from_path(node.path())
     bobject['name']     = unicode(node.name())
     bobject['position'] = list(babylonTransform.extractTranslates())
@@ -36,7 +37,8 @@ def parse_light(scene, bobject, node):
     else:
         light_type = 0
 
-    babylonTransform    = convert_space(node.worldTransform(), scene.HOUDINI_TO_BABYLON_SPACE)
+    babylonTransform    = convert_space(node.worldTransform(), \
+                                        scene.HOUDINI_TO_BABYLON_SPACE)
     bobject['type']     = light_type
     bobject['id']       = id_from_path(node.path())
     bobject['name']     = unicode(node.name())
@@ -101,7 +103,7 @@ def define_submesh(submesh, positions, indices, materialIndex=0,
     return submesh
 
 
-def parse_sop(scene, bobject, sop):
+def parse_sop(scene, bobject, sop, binary=False):
     """Parse SOP geometry for attributes suppored by Babylon. Two paths seem to be necesery, 
     as we apparantly can't mix point's and vertex arrays. That is either all arrays hold 
     data per vertex or per point. The latter one is more efficent for us.
@@ -159,26 +161,38 @@ def parse_sop(scene, bobject, sop):
     # This would be possible via packed primitive assuming we can recongize them
     # via an attribute (check).
 
-    vertexData = scene.new('vertexData')
-    vertexData['id'] = id_from_path(sop.path())
+    # User either vertexData object to hold geometry
+    # or convert arrays to binary string, which we should
+    # save to file later on.
+    if not binary:
+        vertexData = scene.new('vertexData')
+        vertexData['id'] = id_from_path(sop.path())
+        data_holder = vertexData
+        scene.add(vertexData)
+        bobject.__delitem__('delayLoadingFile')
+    else:
+        data_holder = bobject
 
-    vertexData['positions'] = positions
-    vertexData['normals']   = normals
-    vertexData['uvs']       = uvs
-    vertexData['uvs2']      = uvs2
-    vertexData['colors']    = colors
-    vertexData['indices']   = indices
+    # data_holder is either vertexData or mesh object
+    # depending whether we want save data to binary format (the latter case)
+    data_holder['positions'] = positions
+    data_holder['normals']   = normals
+    data_holder['uvs']       = uvs
+    data_holder['uvs2']      = uvs2
+    data_holder['colors']    = colors
+    data_holder['indices']   = indices
 
     # We have to remove this key, otherwise Bab. will see black color:
     if not colors:
-        vertexData.__delitem__('colors')
+        data_holder.__delitem__('colors')
+
 
     submesh = scene.new('subMesh')
     submesh = define_submesh(submesh, positions, indices)
 
-    bobject['geometryId'] = vertexData['id']
+    bobject['geometryId'] = data_holder['id']
     bobject['subMeshes'].append(submesh)
-    scene.add(vertexData)
+    scene.add(bobject)
 
     return bobject
 
@@ -264,6 +278,16 @@ def parse_channels(scene, bobject, node, parm, start, end,  freq=30):
 
     return bobject
 
+def convert_to_binary(scene, mesh, path, node):
+    """ Converts provided Mesh object into babylon binary format, 
+        and saves it to path location.
+    """
+    # TODO:
+    # Series of scene.to_binary_string(mesh[attrib]) 
+    # Series of scene.new('_binaryInfo')
+    # Series of open( path + mesh.id ).write(binary+binary)
+    # Modify mesh delayLoadingFile and mesh['_binaryInfo'] accordingly.
+    pass
 
 
 def id_from_path(path):
@@ -271,7 +295,7 @@ def id_from_path(path):
     """
     return unicode(path.replace("/", "_")[1:])
 
-def run(scene, selected):
+def run(scene, selected, binary=False):
     """Callback of Houdini's shelf.
     """
     import hou
@@ -294,7 +318,10 @@ def run(scene, selected):
             # is closer to Houdini's SOPs. NOTE: We send to the parsers the same 
             # object twise just changing its name (mesh->obj), so Mesh will keep 
             # both geometry and object data.
-            mesh  = parse_sop(scene, scene.new('mesh'), node.renderNode())
+            mesh  = parse_sop(scene, scene.new('mesh'), node.renderNode(), binary)
+            # TODO: Binary format: 
+            # if binary:
+                # mesh = convert_to_binary(scene, mesh, path, node.renderNode())
             obj   = parse_obj(scene, mesh, node)
 
             # Obj level materials for now:
