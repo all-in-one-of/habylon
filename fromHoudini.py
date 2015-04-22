@@ -103,7 +103,7 @@ def define_submesh(submesh, positions, indices, materialIndex=0,
     return submesh
 
 
-def parse_sop(scene, bobject, sop, binary=False):
+def parse_sop(scene, bobject, sop, use_vertexData=False):
     """Parse SOP geometry for attributes suppored by Babylon. Two paths seem to be necesery, 
     as we apparantly can't mix point's and vertex arrays. That is either all arrays hold 
     data per vertex or per point. The latter one is more efficent for us.
@@ -164,7 +164,7 @@ def parse_sop(scene, bobject, sop, binary=False):
     # User either vertexData object to hold geometry
     # or convert arrays to binary string, which we should
     # save to file later on.
-    if not binary:
+    if use_vertexData:
         vertexData = scene.new('vertexData')
         vertexData['id'] = id_from_path(sop.path())
         data_holder = vertexData
@@ -278,16 +278,30 @@ def parse_channels(scene, bobject, node, parm, start, end,  freq=30):
 
     return bobject
 
-def convert_to_binary(scene, mesh, path, node):
+def convert_to_binary(scene, mesh):
     """ Converts provided Mesh object into babylon binary format, 
         and saves it to path location.
     """
-    # TODO:
-    # Series of scene.to_binary_string(mesh[attrib]) 
-    # Series of scene.new('_binaryInfo')
-    # Series of open( path + mesh.id ).write(binary+binary)
+    binary_attributes =  (('positions', 3, scene.BINARY_DATA_FLOAT), 
+                          ('normals',   3, scene.BINARY_DATA_FLOAT), 
+                          ('uvs',       2, scene.BINARY_DATA_FLOAT),  
+                          ('indices',   1, scene.BINARY_DATA_INT))
+
+    binaryStr = ""
+    offset    = 0
+    binaryInfo = scene.new('_binaryInfo')
+    for attribName, stride, _type in binary_attributes:
+        attribArray = mesh[attribName]
+        binaryStr  += scene.to_binary_string(attribArray)
+        binaryInfo["%sAttrDesc"%attribName] = \
+        {'count': len(attribArray), 'stride': stride, 'offset': offset, 'dataType': _type}
+        # Offset in bytes, it seems both floats and int are 4bytes long: 
+        offset += len(attribArray)*4
+
+    mesh['_binaryInfo'] = binaryInfo
     # Modify mesh delayLoadingFile and mesh['_binaryInfo'] accordingly.
-    pass
+
+    return mesh, binaryStr
 
 
 def id_from_path(path):
@@ -295,9 +309,10 @@ def id_from_path(path):
     """
     return unicode(path.replace("/", "_")[1:])
 
-def run(scene, selected, binary=False):
+def run(scene, selected, binary=True, path="/Users/symek/Sites/"):
     """Callback of Houdini's shelf.
     """
+
     import hou
     for node in selected:
         if node.type().name() == "cam":
@@ -319,10 +334,17 @@ def run(scene, selected, binary=False):
             # object twise just changing its name (mesh->obj), so Mesh will keep 
             # both geometry and object data.
             mesh  = parse_sop(scene, scene.new('mesh'), node.renderNode(), binary)
-            # TODO: Binary format: 
-            # if binary:
-                # mesh = convert_to_binary(scene, mesh, path, node.renderNode())
-            obj   = parse_obj(scene, mesh, node)
+
+            # Binary format: 
+            if binary:
+                mesh, bin = convert_to_binary(scene, mesh)
+                filename  = mesh['id'] + ".binary.babylon"
+                with open(os.path.join(path, filename), 'wb') as file: 
+                    file.write(bin)
+                mesh['delayLoadingFile'] = filename
+
+            # Parse object level properties:
+            obj = parse_obj(scene, mesh, node)
 
             # Obj level materials for now:
             material_path = node.parm('shop_materialpath').eval()

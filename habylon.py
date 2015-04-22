@@ -10,13 +10,19 @@ BABYLON_CONSTANTS = dict((("ANIM_TYPE_FLOAT", 0),
                           ("ANIM_TYPE_MATRIX", 3),
                           ("ANIM_LOOP_REL", 0),
                           ("ANIM_LOOP_CYC", 1),
-                          ("ANIM_LOOP_CONST", 2)))
+                          ("ANIM_LOOP_CONST", 2),
+                          ("BINARY_DATA_INT", 0),
+                          ("BINARY_DATA_FLOAT",1)))
 
 # TODO: Inherit from collections.OrderedDict, not dict.
 class BObject(dict):
     """ Dictionary like stucture, but very peaky about data types and schema.
         You can't add anything not present in schema, or change its type (like: int != float)
     """
+    # TODO: test it.
+    #__getattr__ = dict.__getitem__
+    #__setattr__ = dict.__setitem__
+
     def __init__(self, schema, obj):
         super(BObject, self).__init__(schema[obj])
         # type is Babylon object type (camera, light, mesh etc).
@@ -32,8 +38,19 @@ class BObject(dict):
             raise TypeError("Wrong type of %s: %s" % (key, value))
 
     def __repr__(self):
+        """ Uses json.dumps to pretty print diconary.
+        """
         from json import dumps
         return dumps(self, indent=1)
+
+    def rename_key(self, key, newkey):
+        """ Rename key entry in dictonary.
+        """
+        if key in self:
+            item = super(BObject, self).pop(key)
+            super(BObject, self).__setitem__(newkey, item)
+            return True
+        return
 
     def dump(self, filename, check_circular=True):
         from json import dump
