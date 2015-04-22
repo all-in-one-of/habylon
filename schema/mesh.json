@@ -21,6 +21,6 @@
         "animations": [],
         "boundingBoxMinimum":[],
         "boundingBoxMaximum": [],
-        "delayLoadingFile":{},
+        "delayLoadingFile":"",
         "_binaryInfo":{}
 }
