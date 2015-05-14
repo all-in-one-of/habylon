@@ -2,7 +2,7 @@ import json
 import os, sys
 import collections
 # TODO: Remove
-DEFAULT_PATH = "/Users/symek/Documents/work/habylon"
+DEFAULT_PATH = "/home/symek/work/habylon"
 
 BABYLON_CONSTANTS = dict((("ANIM_TYPE_FLOAT", 0),
                           ("ANIM_TYPE_VECTOR", 1),
