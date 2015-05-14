@@ -259,10 +259,10 @@ def id_from_path(path):
     """
     return unicode(path.replace("/", "_")[1:])
 
-def run(scene, selected):
+def run(scene, selected, savepath):
     """Callback of Houdini's shelf.
     """
-    import hou
+    import hou, os
     for node in selected:
         if node.type().name() == "cam":
             camera = parse_camera(scene, scene.new("camera"), node)
@@ -314,6 +314,6 @@ def run(scene, selected):
             if mesh not in shadow['renderList']:
                 shadow['renderList'].append(mesh['id'])
 
-    scene.dump("/Users/symek/Documents/work/habylon/test.babylon")
-    scene.dump("/Users/symek/Sites/test.babylon")
+    scene.dump(os.path.join(savepath, "test.babylon"))
+    # scene.dump("/Users/symek/Sites/test.babylon")
     return scene
