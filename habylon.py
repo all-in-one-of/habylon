@@ -1,8 +1,7 @@
 import json
 import os, sys
 import collections
-# TODO: Remove
-DEFAULT_PATH = "/Users/symek/Documents/work/habylon"
+
 
 BABYLON_CONSTANTS = dict((("ANIM_TYPE_FLOAT", 0),
                           ("ANIM_TYPE_VECTOR", 1),
@@ -74,7 +73,7 @@ class Scene(BObject):
         """Initilize with scene (global in Babylon docs) schema.
         """
         # NOTE: temporary fallback:
-        path = os.getenv("HABYLON_PATH", DEFAULT_PATH)
+        path = os.getenv("HABYLON_PATH", "./")
 
         # Get the notion who we are...
         self.schema = self.load_schemas(os.path.join(path, "schema"))
