@@ -103,7 +103,7 @@ def define_submesh(submesh, positions, indices, materialIndex=0,
     return submesh
 
 
-def parse_sop(scene, bobject, sop, use_vertexData=False):
+def parse_sop(scene, bobject, sop, binary=False):
     """Parse SOP geometry for attributes suppored by Babylon. Two paths seem to be necesery, 
     as we apparantly can't mix point's and vertex arrays. That is either all arrays hold 
     data per vertex or per point. The latter one is more efficent for us.
@@ -164,12 +164,15 @@ def parse_sop(scene, bobject, sop, use_vertexData=False):
     # User either vertexData object to hold geometry
     # or convert arrays to binary string, which we should
     # save to file later on.
-    if use_vertexData:
+    if not binary:
+        # FIXME: This isn't clean...
         vertexData = scene.new('vertexData')
         vertexData['id'] = id_from_path(sop.path())
-        data_holder = vertexData
+        bobject['geometryId'] = vertexData['id']
         scene.add(vertexData)
         bobject.__delitem__('delayLoadingFile')
+        bobject.__delitem__('_binaryInfo')
+        data_holder = vertexData
     else:
         data_holder = bobject
 
@@ -189,8 +192,6 @@ def parse_sop(scene, bobject, sop, use_vertexData=False):
 
     submesh = scene.new('subMesh')
     submesh = define_submesh(submesh, positions, indices)
-
-    bobject['geometryId'] = data_holder['id']
     bobject['subMeshes'].append(submesh)
     scene.add(bobject)
 
@@ -208,6 +209,10 @@ def parse_obj(scene, bobject, node):
     bobject['position'] = list(transform)
     bobject['rotation'] = list(rotation)
     bobject['scaling']  = list(scale)
+    # TODO: Not sure it this is right place for bounding box retrival.
+    geometry = node.renderNode().geometry()
+    bobject['boundingBoxMinimum'] = list(geometry.boundingBox().minvec())
+    bobject['boundingBoxMaximum'] = list(geometry.boundingBox().maxvec())
     return bobject
 
 def parse_material(scene, bobject, shop):
@@ -325,7 +330,7 @@ def id_from_path(path):
     """
     return unicode(path.replace("/", "_")[1:])
 
-def run(scene, selected, binary=True, path="/Users/symek/Sites/"):
+def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
     """Callback of Houdini's shelf.
     """
     import hou
@@ -352,13 +357,14 @@ def run(scene, selected, binary=True, path="/Users/symek/Sites/"):
 
             # Parse object level properties:
             obj   = parse_obj(scene, scene.new('mesh'), node)
-            mesh  = parse_sop(scene, obj, node.renderNode(), False)
+            print obj
+            mesh  = parse_sop(scene, obj, node.renderNode(), binary)
 
             # Binary format: 
             if binary:
                 mesh, bin = convert_to_binary(scene, mesh)
                 filename  = mesh['id'] + ".binary.babylon"
-                with open(os.path.join(path, filename), 'wb') as file: 
+                with open(os.path.join(scene_save_path, filename), 'wb') as file: 
                     file.write(bin)
 
 
@@ -391,6 +397,5 @@ def run(scene, selected, binary=True, path="/Users/symek/Sites/"):
             if mesh not in shadow['renderList']:
                 shadow['renderList'].append(mesh['id'])
 
-    scene.dump("/Users/symek/Documents/work/habylon/test.babylon")
-    scene.dump("/Users/symek/Sites/test.babylon")
+    scene.dump(os.path.join(scene_save_path, "test.babylon"))
     return scene
