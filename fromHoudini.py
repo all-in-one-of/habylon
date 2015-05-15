@@ -34,6 +34,8 @@ def parse_light(scene, bobject, node):
             light_type = 2
     elif light_type == 6:
             light_type = 1
+    elif light_type == 7:
+        light_type = 3
     else:
         light_type = 0
 
@@ -251,6 +253,7 @@ def parse_material(scene, bobject, shop):
     bobject['specular']      = list(multVec(shop.parmTuple("specColor1").eval(),\
                                             shop.parm("spec_int").eval()))
     bobject['specularPower'] = getparmv(shop, 'spec_rough', bobject, 'specularPower')
+    bobject['alpha']         = float(shop.parm("opac_int").eval())
 
     # Maps:
     if shop.parm("useColorMap").eval():
