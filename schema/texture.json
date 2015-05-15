@@ -1,0 +1,18 @@
+{
+    "name": "",
+    "level": 1,
+    "hasAlpha": true,
+    "getAlphaFromRGB": false,
+    "coordinatesMode": 0,
+    "uOffset": 0,
+    "vOffset": 0,
+    "uScale": 1,
+    "vScale": 1,
+    "uAng": 0,
+    "vAng": 0,
+    "wAng": 0,
+    "wrapU": true,
+    "wrapV": true,
+    "coordinatesIndex": 0,
+    "animations": []
+}
