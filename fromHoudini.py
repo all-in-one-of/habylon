@@ -220,25 +220,50 @@ def parse_material(scene, bobject, shop):
        to Babylon material.
     """
     import os.path
-    def getparmv(bobject, d, shop, s):
+    def getparmv(shop, s, bobject=None, d=None):
         """FIXME: This needs more work. Str versus digits etc.
         """
-        if s in shop.parms() and d in bobject.keys():
+        if s in shop.parms():
             v = list(shot.parmTuple(s).eval())
             if len(v) == 1:
                 return v[0]
             return v
         else:
-            return bobject[d]
+            if d and bobject:
+                if d in bobject.keys():
+                    return bobject[d]
+
+    def multVec(vec, m):
+        """Basic vec multiplier"""
+        vec = list(vec)
+
+        if type(m) in (type(0), type(0.0)):
+            return [x*m for x in vec]
+        else:
+            m = list(m)
+            return [x*y for x, y in zip(vec, m)]
+
 
     bobject['id']            = id_from_path(shop.path())
     bobject['name']          = unicode(shop.name())
-    bobject['diffuse']       = getparmv(bobject, 'diffuse', shop, 'baseColor')
-    bobject['specular']      = getparmv(bobject, 'specular', shop, 'specColor1')
-    bobject['specularPower'] = getparmv(bobject, 'specularPower', shop, 'spec_rough' )
-    diffuseTexture           = scene.new('diffuseTexture')
-    diffuseTexture['name']   = unicode(os.path.split(shop.parm('baseColorMap').eval())[1])
-    bobject['diffuseTexture'] = diffuseTexture
+    bobject['diffuse']       = list(multVec(shop.parmTuple("baseColor").eval(), \
+                                            shop.parm("diff_int").eval()))
+    bobject['specular']      = list(multVec(shop.parmTuple("specColor1").eval(),\
+                                            shop.parm("spec_int").eval()))
+    bobject['specularPower'] = getparmv(shop, 'spec_rough', bobject, 'specularPower')
+
+    # Maps:
+    if shop.parm("useColorMap").eval():
+        diffuseTexture           = scene.new('texture')
+        diffuseTexture['name']   = unicode(os.path.split(shop.parm('baseColorMap').eval())[1])
+        bobject['diffuseTexture']= diffuseTexture
+    if shop.parm("useNormalMap").eval():
+        # Babylon bump map is actually normal map...
+        bumpTexture              = scene.new('texture')
+        bumpTexture['name']      = unicode(os.path.split(shop.parm('baseNormalMap').eval())[1])
+        bobject['bumpTexture']   = bumpTexture
+
+
     return bobject
 
 def parse_channels(scene, bobject, node, parm, start, end,  freq=30):
