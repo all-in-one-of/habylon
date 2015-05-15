@@ -7,8 +7,9 @@
     "minZ": 0.1,
     "maxZ": 100,
     "speed": 1,
-    "inertia": 0.9,
+    "inertia": 0.0,
     "checkCollisions": false,
     "applyGravity": false,
-    "ellipsoid": [0.2, 0.9, 0.2]
+    "ellipsoid": [0.2, 0.9, 0.2],
+    "lockedTargetId": ""
 }
