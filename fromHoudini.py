@@ -12,6 +12,11 @@ def parse_camera(scene, bobject, node):
     aperture            = node.parm("aperture").eval()
     focal               = node.parm("focal").eval()
     bobject['fov']      = 2 * atan((aperture/2.0) / focal)
+
+    # lockedTargetId Support:
+    target_path = node.parm("lookatpath").eval()
+    if target_path:
+        bobject['lockedTargetId'] = id_from_path(target_path)
     return bobject
 
 
