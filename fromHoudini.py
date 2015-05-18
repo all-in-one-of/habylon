@@ -208,9 +208,12 @@ def parse_sop(scene, bobject, sop, binary=False):
 def parse_obj(scene, bobject, node):
     """ Creates a babylon mesh from Obj node.
     """
-    transform  = node.worldTransform().extractTranslates()
-    rotation   = node.worldTransform().extractRotates()
-    scale      = node.worldTransform().extractScales()
+    babylonTransform    = convert_space(node.worldTransform(), \
+                                        scene.HOUDINI_TO_BABYLON_SPACE)
+    transform  = babylonTransform.extractTranslates()
+    rotation   = babylonTransform.extractRotates()
+    scale      = babylonTransform.extractScales()
+
     bobject['id']       = id_from_path(node.path())
     bobject['name']     = unicode(node.name())
     bobject['position'] = list(transform)
@@ -390,7 +393,6 @@ def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
 
             # Parse object level properties:
             obj   = parse_obj(scene, scene.new('mesh'), node)
-            print obj
             mesh  = parse_sop(scene, obj, node.renderNode(), binary)
 
             # Binary format: 
