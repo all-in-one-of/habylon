@@ -3,7 +3,8 @@ def parse_camera(scene, bobject, node):
     from hou import Vector3, Matrix4
     from math import atan
 
-    babylonTransform    = convert_space(node.worldTransform(), scene.HOUDINI_TO_BABYLON_SPACE)
+    babylonTransform    = convert_space(node.worldTransform(), \
+                                        scene.HOUDINI_TO_BABYLON_SPACE)
     bobject['id']       = id_from_path(node.path())
     bobject['name']     = unicode(node.name())
     bobject['position'] = list(babylonTransform.extractTranslates())
@@ -11,6 +12,11 @@ def parse_camera(scene, bobject, node):
     aperture            = node.parm("aperture").eval()
     focal               = node.parm("focal").eval()
     bobject['fov']      = 2 * atan((aperture/2.0) / focal)
+
+    # lockedTargetId Support:
+    target_path = node.parm("lookatpath").eval()
+    if target_path:
+        bobject['lockedTargetId'] = id_from_path(target_path)
     return bobject
 
 
@@ -33,10 +39,13 @@ def parse_light(scene, bobject, node):
             light_type = 2
     elif light_type == 6:
             light_type = 1
+    elif light_type == 7:
+        light_type = 3
     else:
         light_type = 0
 
-    babylonTransform    = convert_space(node.worldTransform(), scene.HOUDINI_TO_BABYLON_SPACE)
+    babylonTransform    = convert_space(node.worldTransform(), \
+                                        scene.HOUDINI_TO_BABYLON_SPACE)
     bobject['type']     = light_type
     bobject['id']       = id_from_path(node.path())
     bobject['name']     = unicode(node.name())
@@ -101,7 +110,7 @@ def define_submesh(submesh, positions, indices, materialIndex=0,
     return submesh
 
 
-def parse_sop(scene, bobject, sop):
+def parse_sop(scene, bobject, sop, binary=False):
     """Parse SOP geometry for attributes suppored by Babylon. Two paths seem to be necesery, 
     as we apparantly can't mix point's and vertex arrays. That is either all arrays hold 
     data per vertex or per point. The latter one is more efficent for us.
@@ -153,20 +162,45 @@ def parse_sop(scene, bobject, sop):
             for v in prim.vertices():
                 indices.append(v.point().number())
 
-    # Assign arrays to our object:
-    # TODO: I would rather use vertexData if possible.
-    bobject['positions'] = positions
-    bobject['normals']   = normals
-    bobject['uvs']       = uvs
-    bobject['uvs2']      = uvs2
-    bobject['colors']    = colors
+    # Assign arrays to our object using vertexData
+    # and assigning it to this mesh.
+    # TODO: I assume vertexData could be shared among meshes. Can we support it?
+    # This would be possible via packed primitive assuming we can recongize them
+    # via an attribute (check).
+
+    # User either vertexData object to hold geometry
+    # or convert arrays to binary string, which we should
+    # save to file later on.
+    if not binary:
+        # FIXME: This isn't clean...
+        vertexData = scene.new('vertexData')
+        vertexData['id'] = id_from_path(sop.path())
+        bobject['geometryId'] = vertexData['id']
+        scene.add(vertexData)
+        bobject.__delitem__('delayLoadingFile')
+        bobject.__delitem__('_binaryInfo')
+        data_holder = vertexData
+    else:
+        data_holder = bobject
+
+    # data_holder is either vertexData or mesh object
+    # depending whether we want save data to binary format (the latter case)
+    data_holder['positions'] = positions
+    data_holder['normals']   = normals
+    data_holder['uvs']       = uvs
+    data_holder['uvs2']      = uvs2
+    data_holder['colors']    = colors
+    data_holder['indices']   = indices
+
+    # We have to remove this key, otherwise Bab. will see black color:
     if not colors:
-        bobject.__delitem__('colors')
-    bobject['indices']   = indices
+        data_holder.__delitem__('colors')
+
 
     submesh = scene.new('subMesh')
     submesh = define_submesh(submesh, positions, indices)
     bobject['subMeshes'].append(submesh)
+    scene.add(bobject)
 
     return bobject
 
@@ -174,14 +208,21 @@ def parse_sop(scene, bobject, sop):
 def parse_obj(scene, bobject, node):
     """ Creates a babylon mesh from Obj node.
     """
-    transform  = node.worldTransform().extractTranslates()
-    rotation   = node.worldTransform().extractRotates()
-    scale      = node.worldTransform().extractScales()
+    babylonTransform    = convert_space(node.worldTransform(), \
+                                        scene.HOUDINI_TO_BABYLON_SPACE)
+    transform  = babylonTransform.extractTranslates()
+    rotation   = babylonTransform.extractRotates()
+    scale      = babylonTransform.extractScales()
+
     bobject['id']       = id_from_path(node.path())
     bobject['name']     = unicode(node.name())
     bobject['position'] = list(transform)
     bobject['rotation'] = list(rotation)
     bobject['scaling']  = list(scale)
+    # TODO: Not sure it this is right place for bounding box retrival.
+    geometry = node.renderNode().geometry()
+    bobject['boundingBoxMinimum'] = list(geometry.boundingBox().minvec())
+    bobject['boundingBoxMaximum'] = list(geometry.boundingBox().maxvec())
     return bobject
 
 def parse_material(scene, bobject, shop):
@@ -189,25 +230,51 @@ def parse_material(scene, bobject, shop):
        to Babylon material.
     """
     import os.path
-    def getparmv(bobject, d, shop, s):
+    def getparmv(shop, s, bobject=None, d=None):
         """FIXME: This needs more work. Str versus digits etc.
         """
-        if s in shop.parms() and d in bobject.keys():
+        if s in shop.parms():
             v = list(shot.parmTuple(s).eval())
             if len(v) == 1:
                 return v[0]
             return v
         else:
-            return bobject[d]
+            if d and bobject:
+                if d in bobject.keys():
+                    return bobject[d]
+
+    def multVec(vec, m):
+        """Basic vec multiplier"""
+        vec = list(vec)
+
+        if type(m) in (type(0), type(0.0)):
+            return [x*m for x in vec]
+        else:
+            m = list(m)
+            return [x*y for x, y in zip(vec, m)]
+
 
     bobject['id']            = id_from_path(shop.path())
     bobject['name']          = unicode(shop.name())
-    bobject['diffuse']       = getparmv(bobject, 'diffuse', shop, 'baseColor')
-    bobject['specular']      = getparmv(bobject, 'specular', shop, 'specColor1')
-    bobject['specularPower'] = getparmv(bobject, 'specularPower', shop, 'spec_rough' )
-    diffuseTexture           = scene.new('diffuseTexture')
-    diffuseTexture['name']   = unicode(os.path.split(shop.parm('baseColorMap').eval())[1])
-    bobject['diffuseTexture'] = diffuseTexture
+    bobject['diffuse']       = list(multVec(shop.parmTuple("baseColor").eval(), \
+                                            shop.parm("diff_int").eval()))
+    bobject['specular']      = list(multVec(shop.parmTuple("specColor1").eval(),\
+                                            shop.parm("spec_int").eval()))
+    bobject['specularPower'] = getparmv(shop, 'spec_rough', bobject, 'specularPower')
+    bobject['alpha']         = float(shop.parm("opac_int").eval())
+
+    # Maps:
+    if shop.parm("useColorMap").eval():
+        diffuseTexture           = scene.new('texture')
+        diffuseTexture['name']   = unicode(os.path.split(shop.parm('baseColorMap').eval())[1])
+        bobject['diffuseTexture']= diffuseTexture
+    if shop.parm("useNormalMap").eval():
+        # Babylon bump map is actually normal map...
+        bumpTexture              = scene.new('texture')
+        bumpTexture['name']      = unicode(os.path.split(shop.parm('baseNormalMap').eval())[1])
+        bobject['bumpTexture']   = bumpTexture
+
+
     return bobject
 
 def parse_channels(scene, bobject, node, parm, start, end,  freq=30):
@@ -252,6 +319,46 @@ def parse_channels(scene, bobject, node, parm, start, end,  freq=30):
 
     return bobject
 
+def convert_to_binary(scene, mesh):
+    """ Converts provided Mesh object into babylon binary format, 
+        and saves it to path location.
+    """
+    # For starter. TODO: add colors, uvs2:
+    binary_attributes =  (('positions', 3, scene.BINARY_DATA_FLOAT), 
+                          ('normals',   3, scene.BINARY_DATA_FLOAT), 
+                          ('uvs',       2, scene.BINARY_DATA_FLOAT),  
+                          ('indices',   1, scene.BINARY_DATA_INT))
+
+    binaryStr = ""
+    offset    = 0
+    binaryInfo = scene.new('_binaryInfo')
+
+    for attribName, stride, _type in binary_attributes:
+        attribArray = mesh[attribName]
+        # Attribute == []:
+        if not attribArray:
+            continue
+        # otherwise convert and concatenate:
+        binaryStr  += scene.to_binary_string(attribArray)
+        binaryInfo["%sAttrDesc"%attribName] = \
+        {'count': len(attribArray), 'stride': stride, 'offset': offset, 'dataType': _type}
+        # Offset in bytes, it seems both floats and int are 4bytes long: 
+        offset += len(attribArray)*4
+        # Remove data from mesh:
+        mesh[attribName] = []
+
+    # last x5 ints are subMeshesInfo:
+    for submesh in mesh['subMeshes']:
+        _array = [submesh["materialIndex"], submesh["verticesStart"], 
+                  submesh["indexCount"], submesh["indexStart"], submesh["verticesCount"]]
+        binaryStr += scene.to_binary_string(_array)
+
+    binaryInfo['subMeshesAttrDesc'] = \
+    {'count': len(mesh['subMeshes']), 'stride': 5, 'offset': offset, 'dataType': 0}
+
+    mesh['_binaryInfo']      = binaryInfo
+    mesh['delayLoadingFile'] = mesh['id'] + ".binary.babylon"
+    return mesh, binaryStr
 
 
 def id_from_path(path):
@@ -259,10 +366,12 @@ def id_from_path(path):
     """
     return unicode(path.replace("/", "_")[1:])
 
-def run(scene, selected, savepath):
+
+def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
     """Callback of Houdini's shelf.
     """
     import hou, os
+
     for node in selected:
         if node.type().name() == "cam":
             camera = parse_camera(scene, scene.new("camera"), node)
@@ -282,8 +391,18 @@ def run(scene, selected, savepath):
             # is closer to Houdini's SOPs. NOTE: We send to the parsers the same 
             # object twise just changing its name (mesh->obj), so Mesh will keep 
             # both geometry and object data.
-            mesh  = parse_sop(scene, scene.new('mesh'), node.renderNode())
-            obj   = parse_obj(scene, mesh, node)
+
+            # Parse object level properties:
+            obj   = parse_obj(scene, scene.new('mesh'), node)
+            mesh  = parse_sop(scene, obj, node.renderNode(), binary)
+
+            # Binary format: 
+            if binary:
+                mesh, bin = convert_to_binary(scene, mesh)
+                filename  = mesh['id'] + ".binary.babylon"
+                with open(os.path.join(scene_save_path, filename), 'wb') as file: 
+                    file.write(bin)
+
 
             # Obj level materials for now:
             material_path = node.parm('shop_materialpath').eval()
@@ -314,6 +433,5 @@ def run(scene, selected, savepath):
             if mesh not in shadow['renderList']:
                 shadow['renderList'].append(mesh['id'])
 
-    scene.dump(os.path.join(savepath, "test.babylon"))
-    # scene.dump("/Users/symek/Sites/test.babylon")
+    scene.dump(os.path.join(scene_save_path, "test.babylon"))
     return scene

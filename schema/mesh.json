@@ -18,5 +18,9 @@
         "colors":[],
         "indices": [],
         "subMeshes": [],
-        "animations": []
+        "animations": [],
+        "boundingBoxMinimum":[],
+        "boundingBoxMaximum": [],
+        "delayLoadingFile":"",
+        "_binaryInfo":{}
 }
