@@ -11,5 +11,6 @@
     "checkCollisions": false,
     "applyGravity": false,
     "ellipsoid": [0.2, 0.9, 0.2],
-    "lockedTargetId": ""
+    "lockedTargetId": "",
+    "parentId": ""
 }
