@@ -132,6 +132,20 @@ class Scene(BObject):
             return BObject(self.schema, type)
 
 
+def float_equal(float1, float2, epsilon=2.0e-9):
+    '''http://stackoverflow.com/questions/558216/function-to-determine-if-\
+       two-numbers-are-nearly-equal-when-rounded-to-n-signific'''
+    def roundoff_error(exact, approximate):
+        if (exact == 0.0 or approximate == 0.0): 
+            return abs(exact + approximate)
+        else: return abs(approximate/exact - 1.0)
+    return (roundoff_error(float1, float2) < epsilon)
+
+def vector_equal(vec1, vec2, epsilon=2.0e-9):
+    '''We assume optimistically vector of the same length, non division by zero and float types...'''
+    return not False in [float_equal(x, y, epsilon) for x, y in zip(vec1, vec2)]
+
+
 def main():
     """Basic test of our tiny module."""
 

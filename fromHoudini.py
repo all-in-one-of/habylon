@@ -325,6 +325,47 @@ def parse_channels(scene, bobject, node, parm, start, end,  freq=30):
 
     return bobject
 
+def parse_xform(scene, obj, node, start, end, freq=30):
+    """ Creates a series of animations from object's world transform.
+        This is replacement for parse_channels().
+    """
+    from habylon import vector_equal
+    properties = {u'position': [], u'rotation': [], u'scaling' : []}
+    xform = []
+
+    # Get transformations in Babylon space:
+    for frame in range(start, end, freq):
+        transform        = node.worldTransformAtTime(1.0*frame/freq)
+        babylonTransform = convert_space(transform, scene.HOUDINI_TO_BABYLON_SPACE)
+        position         = babylonTransform.extractTranslates()
+        rotation         = babylonTransform.extractRotates()
+        scale            = babylonTransform.extractScales()
+        properties['position'].append(position)
+        properties['rotation'].append(rotation)
+        properties['scaling'].append(scale)
+
+    # Create animation object per transformation component (t,r,s)
+    for prop in properties:
+        item = properties[prop]
+        # Check for constant component and don't bother with them.
+        # This is expensive!
+        if False in [vector_equal(item[0], item[x]) for x in range(1, len(item))]:
+            animation = scene.new('animation')
+            animation['name'] = id_from_path(node.path()) + "_" + prop
+            animation['dataType'] = scene.ANIM_TYPE_VECTOR
+            animation['autoAnimateFrom'] = start*1.0
+            animation['autoAnimateTo']   = end*1.0
+            animation['property'] = prop
+            for frame in range(len(item)):
+                keyframe = scene.new('animationKey')
+                keyframe['frame'] = frame * 1.0 * freq
+                keyframe['values'] = list(item[frame])
+                animation['keys'].append(keyframe)
+            xform.append(animation)
+
+    return xform
+
+
 def convert_to_binary(scene, mesh):
     """ Converts provided Mesh object into babylon binary format, 
         and saves it to path location.
@@ -420,15 +461,11 @@ def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
             # Animation export. Babylon deals with vector or float animation,
             # so we have to treat all tuple channeles at once even if only one axe
             # is animated.
-            for tuple_ in "t r s".split():
-                for axe in 'x y z'.split():
-                    parm = tuple_ + axe
-                    if node.parm(parm).isTimeDependent():
-                        start, end = (hou.expandString("$RFSTART"), hou.expandString('$RFEND'))
-                        animation = parse_channels(scene, scene.new('animation'), node, parm, int(start), int(end), int(hou.fps()))
-                        obj['animations'].append(animation)
-                        break
 
+            if node.isTimeDependent():
+                start, end = (hou.expandString("$RFSTART"), hou.expandString('$RFEND'))
+                xform      = parse_xform(scene, obj, node, int(start), int(end), int(hou.fps()))
+                obj['animations'] = xform
 
             scene.add(obj)
 
