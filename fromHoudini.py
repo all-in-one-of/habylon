@@ -436,7 +436,7 @@ def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
     # TODO: Respect shadow linking. 
     for shadow in scene['shadowGenerators']:
         for mesh in scene['meshes']:
-            if mesh not in shadow['renderList']:
+            if mesh['id'] not in shadow['renderList']:
                 shadow['renderList'].append(mesh['id'])
 
     scene.dump(os.path.join(scene_save_path, "test.babylon"))
