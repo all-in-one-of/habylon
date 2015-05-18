@@ -17,6 +17,12 @@ def parse_camera(scene, bobject, node):
     target_path = node.parm("lookatpath").eval()
     if target_path:
         bobject['lockedTargetId'] = id_from_path(target_path)
+
+    # Parent support:
+    inputs_tuple = node.inputs()
+    if inputs_tuple:
+        parentId = id_from_path(inputs_tuple[0].path())
+        bobject['parentId'] = parentId
     return bobject
 
 
