@@ -1,7 +1,7 @@
 {
     "autoClear": true,
     "clearColor": [0, 0, 0],
-    "ambientColor": [0, 0, 0],
+    "ambientColor": [1, 1, 1],
     "gravity": [0, -9.81, 0],
     "cameras": [],
     "activeCamera": "",
