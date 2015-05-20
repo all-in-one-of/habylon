@@ -181,7 +181,7 @@ def parse_sop(scene, bobject, sop, binary=False):
     # This would be possible via packed primitive assuming we can recongize them
     # via an attribute (check).
 
-    # User either vertexData object to hold geometry
+    # Use either vertexData object to hold geometry
     # or convert arrays to binary string, which we should
     # save to file later on.
     if not binary:
@@ -212,8 +212,7 @@ def parse_sop(scene, bobject, sop, binary=False):
 
     submesh = scene.new('subMesh')
     submesh = define_submesh(submesh, positions, indices)
-    bobject['subMeshes'].append(submesh)
-    scene.add(bobject)
+    bobject['subMeshes'] = [submesh]
 
     return bobject
 
@@ -474,7 +473,7 @@ def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
                 xform      = parse_xform(scene, obj, node, int(start), int(end), int(hou.fps()))
                 obj['animations'] = xform
 
-            #scene.add(obj)
+            scene.add(obj)
 
     # link shadows:
     # TODO: Respect shadow linking. 
