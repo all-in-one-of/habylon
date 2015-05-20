@@ -13,6 +13,13 @@ def parse_camera(scene, bobject, node):
     focal               = node.parm("focal").eval()
     bobject['fov']      = 2 * atan((aperture/2.0) / focal)
 
+    if node.parm("camera_type"):
+        bobject['type']     = unicode(node.parm("camera_type").eval())
+        if bobject['type'] == u'ArcRotateCamera':
+            bobject['alpha']  =  node.parm("arc_paramsx").eval()
+            bobject['beta']   =  node.parm("arc_paramsy").eval()
+            bobject['radius'] =  node.parm("arc_paramsz").eval()
+
     # lockedTargetId Support:
     target_path = node.parm("lookatpath").eval()
     if target_path:
@@ -467,7 +474,7 @@ def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
                 xform      = parse_xform(scene, obj, node, int(start), int(end), int(hou.fps()))
                 obj['animations'] = xform
 
-            scene.add(obj)
+            #scene.add(obj)
 
     # link shadows:
     # TODO: Respect shadow linking. 
