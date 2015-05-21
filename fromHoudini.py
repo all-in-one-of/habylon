@@ -361,9 +361,10 @@ def parse_xform(scene, obj, node, start, end, freq=30):
             animation['dataType'] = scene.ANIM_TYPE_VECTOR
             animation['autoAnimateFrom'] = start*1.0
             animation['autoAnimateTo']   = end*1.0
+            animation['framePerSecond']  = freq
             animation['property'] = prop
             for frame in range(len(item)):
-                keyframe = scene.new('animationKey')
+                keyframe = scene.new('animationKey') 
                 keyframe['frame'] = frame * 1.0 * freq
                 keyframe['values'] = list(item[frame])
                 animation['keys'].append(keyframe)
