@@ -50,7 +50,7 @@ class BObject(dict):
             return True
         return
 
-    def dump(self, filename, check_circular=True):
+    def dump(self, filename, check_circular=False):
         from json import dump
         with open(filename, 'w') as file:
             return dump(self, file, indent=2, check_circular=check_circular)
