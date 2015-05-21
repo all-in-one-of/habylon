@@ -123,7 +123,7 @@ def define_submesh(submesh, positions, indices, materialIndex=0,
     return submesh
 
 
-def parse_sop(scene, bobject, sop, binary=False):
+def parse_sop(scene, bobject, sop, localData=False):
     """Parse SOP geometry for attributes suppored by Babylon. Two paths seem to be necesery, 
     as we apparantly can't mix point's and vertex arrays. That is either all arrays hold 
     data per vertex or per point. The latter one is more efficent for us.
@@ -184,7 +184,7 @@ def parse_sop(scene, bobject, sop, binary=False):
     # Use either vertexData object to hold geometry
     # or convert arrays to binary string, which we should
     # save to file later on.
-    if not binary:
+    if not localData:
         # FIXME: This isn't clean...
         vertexData = scene.new('vertexData')
         vertexData['id'] = id_from_path(sop.path())
@@ -384,7 +384,7 @@ def convert_to_binary(scene, mesh):
 
     binaryStr = ""
     offset    = 0
-    binaryInfo = scene.new('_binaryInfo')
+    binaryInfo = {}# scene.new('_binaryInfo')
 
     for attribName, stride, _type in binary_attributes:
         attribArray = mesh[attribName]
@@ -410,7 +410,7 @@ def convert_to_binary(scene, mesh):
     {'count': len(mesh['subMeshes']), 'stride': 5, 'offset': offset, 'dataType': 0}
 
     mesh['_binaryInfo']      = binaryInfo
-    mesh['delayLoadingFile'] = mesh['id'] + ".binary.babylon"
+    mesh['delayLoadingFile'] = mesh['id'] + ".babylonbinarymeshdata"
     return mesh, binaryStr
 
 
@@ -424,7 +424,7 @@ def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
     """Callback of Houdini's shelf.
     """
     import hou, os
-
+    binary = True
     for node in selected:
         if node.type().name() == "cam":
             camera = parse_camera(scene, scene.new("camera"), node)
@@ -452,7 +452,7 @@ def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
             # Binary format: 
             if binary:
                 mesh, bin = convert_to_binary(scene, mesh)
-                filename  = mesh['id'] + ".binary.babylon"
+                filename  = mesh['id'] + ".babylonbinarymeshdata"
                 with open(os.path.join(scene_save_path, filename), 'wb') as file: 
                     file.write(bin)
 
@@ -482,5 +482,5 @@ def run(scene, selected, binary=False, scene_save_path="/var/www/html/"):
             if mesh['id'] not in shadow['renderList']:
                 shadow['renderList'].append(mesh['id'])
 
-    scene.dump(os.path.join(scene_save_path, "test.babylon"))
+    scene.dump(os.path.join(scene_save_path, "test.binary.babylon"))
     return scene
